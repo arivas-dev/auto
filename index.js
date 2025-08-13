@@ -7,16 +7,22 @@ let Contador = 0;
 let interval = 4;
 let inicio = new Date().getTime();
 // variable that indicates how often the interval should be changed
-const timeToChangeInterval = 9;
+const timeToChangeInterval = 1;
+const timeToShutDownPC = undefined;
+const timeToShutDownPCMinutes = undefined;
+const ALL_EVENTS = [RandomMouse,ScrollUp, ScrollDown, ChangeProgramOpened,changeTabOpened]
 
 // RandomMouse,ScrollUp, ScrollDown, ChangeProgramOpened,changeTabOpened :: ALL EVENTS
-const events = [RandomMouse,ScrollUp, ScrollDown, ChangeProgramOpened];
+const events = [...ALL_EVENTS];
 setInterval(MouseMoveCheck, 1000); // Check every second if the mouse has moved
+setInterval(shutDownPCAt, 1000); // Check if the time is 9:00 pm
 
 
-// function to determine that 11 minutes have already elapsed and change the random interval, between 2 and 12
+// function to determine that 11 minutes have already elapsed and change the random interval, between 2 and 8
 function getNewInterval() {
-  return Math.floor(Math.random() * 10) + 2;
+  // return Math.floor(Math.random() * 6) + 2;
+  // between 1 and 3
+  return Math.floor(Math.random() * 3) + 1;
 }
 
 function checkIfTimeToChangeInterval() {
@@ -54,6 +60,11 @@ function ScrollDown() {
 function changeTabOpened() {
 
   const applescriptCommand = `osascript -e 'tell application "System Events" to get name of process 1 whose frontmost is true'`;
+  // const applescriptCommand = `osascript -e 'tell application "System Events" to get name of (first process whose frontmost is true)'`;
+  // const applescriptCommand = `osascript -e 'tell application "Eventos del sistema" to get name of (first proceso whose frontmost is true)'`;
+  // const applescriptCommand = `osascript -l JavaScript -e 'Application("System Events").processes.whose({frontmost: true})[0].name()'`;
+
+
 
  
   // Ejecuta el comando y maneja la salida
@@ -67,17 +78,19 @@ function changeTabOpened() {
     const activeApplication = stdout.trim();
     // console.log("activeApplication:", activeApplication)
 
-    const randomTabNumber = Math.floor(Math.random() * 4);
-    // console.log("randomTabNumber:", randomTabNumber)
-
+    let randomTabNumber = Math.floor(Math.random() * 3) + 1;
+    if(activeApplication === 'Electron' || activeApplication === 'Cursor'){
+      randomTabNumber = Math.floor(Math.random() * 3) + 18;
+    }
  
     const actions = {
       'Google Chrome': `osascript -e 'tell application "System Events" to keystroke "${randomTabNumber}" using {command down}'`,
-      // 'Electron': `osascript -e 'tell application "System Events" to keystroke "${randomTabNumber}" using {control down}'`
+      // 'Electron': `osascript -e 'tell application "System Events" to key code "${randomTabNumber}" using {control down}'`
+      'Electron': `osascript -e 'tell application "System Events" to key code ${randomTabNumber} using {control down}'`,
+      'Cursor': `osascript -e 'tell application "System Events" to key code ${randomTabNumber} using {control down}'`
     };
 
     const action = actions[activeApplication];
-    // console.log("action:", action)
 
     if (action) {
       exec(action, (error, stdout, stderr) => {
@@ -90,7 +103,6 @@ function changeTabOpened() {
           console.log('Error:', stderr);
           return;
         }
-        // console.log("stdout:", stdout)
     
       });
     }
@@ -121,9 +133,12 @@ function MouseMoveCheck() {
 
 function ChangeProgramOpened() {
   // only pres tab one time
+  const script = 'osascript -e \'tell application "System Events" to key code 48 using {command down}\'';
   // const script = 'osascript -e \'tell application "System Events" to key code 48 using {command down}\'';
+  // const script = `osascript -l JavaScript -e 'Application("System Events").keyCode(48, {using: "command down"})'`;
+
   // press tab two times using when the command key is pressed
-  const script = 'osascript -e \'tell application "System Events" to key down command\' -e \'tell application "System Events" to key code 48\' -e \'delay 0.2\' -e \'tell application "System Events" to key code 48\' -e \'tell application "System Events" to key up command\'';
+  // const script = 'osascript -e \'tell application "System Events" to key down command\' -e \'tell application "System Events" to key code 48\' -e \'delay 0.2\' -e \'tell application "System Events" to key code 48\' -e \'tell application "System Events" to key up command\'';
 
   exec(script, (error, stdout, stderr) => {
     if (error) {
@@ -133,8 +148,29 @@ function ChangeProgramOpened() {
       console.error(stderr);
     }
 
-    // changeTabOpened();
+    changeTabOpened();
   });
+}
+
+function shutDownPCAt(){
+
+  if(timeToShutDownPC === undefined || timeToShutDownPCMinutes === undefined) return
+
+  const date = new Date();
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  
+  if(hours === timeToShutDownPC && minutes === timeToShutDownPCMinutes){
+    const script = 'osascript -e \'tell application "System Events" to shut down\'';
+    exec(script, (error, stdout, stderr) => {
+      if (error) {
+        console.error(error);
+      }
+      if (stderr) {
+        console.error(stderr);
+      }
+    });
+  }
 }
 
 process.stdin.resume(); // Keep the script running
